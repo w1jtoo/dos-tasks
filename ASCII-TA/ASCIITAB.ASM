@@ -1,4 +1,4 @@
-CHARS_SIZE=16
+CHARS_SIZE=10h
 TABLE_SIZE=16*16
 
 model tiny
@@ -26,47 +26,46 @@ model tiny
     fill_in_chars:
         push cx
         xor  cx, cx
+        mov  bx, offset chars
 
         inline_loop:
             inc  cx
 
-            mov  bx,  offset chars
-            add  ax,  cx
-            add  bx,  cx
+            call to_printable
+            mov  [bx], al
+            inc  ax
+            inc  bx
 
-            ; call to_printable
-            mov  [bx], ax
-
-            cmp  cx, TABLE_SIZE
+            cmp  cx, [char_size]
             jne  inline_loop
 
         pop  cx
         ret
 
     ; return char to ax
-    to_printable: ; in cx should be buffer index
-        push ax
+    to_printable: ; in al should be buffer index
+        push cx
         push bx
-        xor  ax, ax
+        mov  bx, offset unprintable_chars
+        xor  cx, cx
+
         _unpritable_chars_loop:
-            inc ax
+            inc cx
 
-            mov bx, offset unprintable_chars
-            add bx, ax
-
-            cmp cx, [bx]
+            cmp al, [bx]
             je _return_dot
+            inc bx
 
-            cmp ax, unprintable_len
+            cmp cx, unprintable_len
             jne _unpritable_chars_loop
         jmp _return_ax
 
         _return_dot:
-            mov ax, 2Eh
+            mov al, 2Eh
         _return_ax:
 
         pop bx
-        pop ax
+        pop cx
         ret
 
     print_chars:
@@ -76,7 +75,7 @@ model tiny
         ret
 
     chars               db  CHARS_SIZE dup (0h), 0dh, 0ah, "$"
-    unprintable_chars   db  20h
+    unprintable_chars   db  0h
     unprintable_len     dw  1
     char_size           dw  CHARS_SIZE
     end main
