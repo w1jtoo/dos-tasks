@@ -7,19 +7,23 @@ model tiny
 
     main:
         xor  cx, cx
+        xor  ax, ax
         _loop:
-            inc cx
+            cmp  cx, CHARS_SIZE
+            je  _return
 
-            mov ax, cx
-            dec ax
-            mul char_size
+            mov  ax, cx
+            mov dx, CHARS_SIZE
+            mul dx
 
             call fill_in_chars
             call print_chars
 
-            cmp  cx, CHARS_SIZE
-            jne  _loop
-        ret
+            inc  cx
+            jmp  _loop
+
+        _return:
+            ret
 
     ; fills in chars memory segment
     ; ax should contain an offset
@@ -31,12 +35,15 @@ model tiny
         inline_loop:
             inc  cx
 
+            mov dx, ax
             call to_printable
-            mov  [bx], al
+            mov [bx], al
+            mov ax, dx
+
             inc  ax
             inc  bx
 
-            cmp  cx, [char_size]
+            cmp  cx, CHARS_SIZE
             jne  inline_loop
 
         pop  cx
@@ -44,28 +51,25 @@ model tiny
 
     ; return char to ax
     to_printable: ; in al should be buffer index
-        push cx
         push bx
         mov  bx, offset unprintable_chars
-        xor  cx, cx
 
         _unpritable_chars_loop:
-            inc cx
+            cmp bx, offset unprintable_end
+            je _return_ax
 
             cmp al, [bx]
             je _return_dot
-            inc bx
 
-            cmp cx, unprintable_len
-            jne _unpritable_chars_loop
-        jmp _return_ax
+            inc bx
+            jmp _unpritable_chars_loop
 
         _return_dot:
             mov al, 2Eh
         _return_ax:
 
         pop bx
-        pop cx
+
         ret
 
     print_chars:
@@ -75,7 +79,6 @@ model tiny
         ret
 
     chars               db  CHARS_SIZE dup (0h), 0dh, 0ah, "$"
-    unprintable_chars   db  0h
-    unprintable_len     dw  1
-    char_size           dw  CHARS_SIZE
+    unprintable_chars   db  0ah, 0dh, 24h ; 24h - brakes print :-(
+    unprintable_end     dw  $
     end main
