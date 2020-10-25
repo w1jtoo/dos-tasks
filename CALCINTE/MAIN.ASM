@@ -3,15 +3,23 @@ BUFFER_LENGTH = 128
 model tiny
 .code
     org 100h
-        start:	
+    start:
 
-            ; Write message
-            mov ah, 09h
-            mov dx, offset message
-            int 21h
+        ; Write message
+        mov     bx, offset numbers
+        call    parse_dec
 
-            ret
+        call    print_dec
+
+        ; mov     ah, 09h
+        ; mov     dx, offset message
+        ; int     21h
+
+        ret
 
     buffer  db BUFFER_LENGTH dup (24h)
-    message	db "Hello DOS $"
+    message db "Hello DOS $"
+    numbers db "123$"
+    include STRUTIL.ASM
+
     end start
