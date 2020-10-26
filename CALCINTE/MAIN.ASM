@@ -14,20 +14,62 @@ model tiny
 ;; =========================
 ;; ========================== ENTRY POINT ============================
     start:
-        ; Write message
+        ;; read line
         call    _read_line
-        ; mov     bx, offset numbers
-        ; call    parse_dec
+        xor     dx, dx
+        xor     cx, cx          ; contains sign
 
-        ; call    print_dec
-        mov     cx, 3
+        mov     bx, (offset buffer + 2)
+        _loop:
+            mov     ax, [bx]
+
+            cmp     al, 0dh
+            je      _ret
+
+            cmp     al, "+"
+            je     _plus
+            
+            cmp     al, "-"
+            je      _minus
+
+            push    ax
+            call    parse_dec          ; ax <- prased number
+
+            cmp     cx, 0h
+            je      _positive_sign
+            jmp     _negative_sign
+
+            _positive_sign:
+                add     dx, ax
+                pop     ax
+                jmp     _loop
+
+            _negative_sign:
+                sub     dx, ax
+                pop     ax
+                jmp     _loop
+ 
+       _ret:
+            push    dx
+            print_ptr   new_line
+            pop     dx
+
+            mov     ax, dx
+            call    print_dec
+            ret
+
+    _to_error_print:
         call    _error_print
-
-        ; mov     ah, 09h
-        ; mov     dx, offset message
-        ; int     21h
-
         ret
+
+    _plus:
+        inc     bx
+        jmp     _loop
+
+    _minus:
+        not     cx
+        inc     bx
+        jmp _loop
 
     _read_line:
         mov     ah, 0Ah
@@ -63,6 +105,7 @@ model tiny
     error_msg_part2 db      "' at $"
     error_msg_part3 db      " position.$"
 ;; ========================== STATIC VARABLES ========================
-    buffer          db      BUFFER_LENGTH dup (24h), "$"
+    buffer          db      BUFFER_LENGTH, BUFFER_LENGTH dup (24h), "$"
+    buffer_end      dw      $
 
     end _start
