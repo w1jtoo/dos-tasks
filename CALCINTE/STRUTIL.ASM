@@ -4,8 +4,19 @@
 ;; result - stdout
 ;; ===================================================================
 print_dec:
-    xor cx, cx
+    xor     cx, cx
+    cmp     ax, 0
+    jge     _pd_rep             ; if not negative goto _rd_rep
+    mov     cx, ax              ; save ax in cx
+    mov     dl, "-"
+    mov     ah, 02h             ; dos print char function
+    int     21h
+    mov     ax, cx              ; get back value from cx
 
+    not     ax                  ; print positive part of number
+    inc     ax                  ; positive = not ax + 1
+
+    xor     cx, cx
     _pd_rep:
         xor     dx, dx
         mov     bx, 10
