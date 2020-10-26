@@ -2,11 +2,18 @@ BUFFER_LENGTH = 255
 
 model tiny
 .code
-    include STDOU.ASM       ; include stdout macros
-
     org 100h
-    start:
 
+;; ========================== ENTRY POINT ============================
+    _start:
+        jmp     start
+;; ===================================================================
+;; ========================== INCLUDE BLOCK
+    include STRUTIL.ASM     ; include str utils
+    include STDOU.ASM       ; include stdout macros
+;; =========================
+;; ========================== ENTRY POINT ============================
+    start:
         ; Write message
         call    _read_line
         ; mov     bx, offset numbers
@@ -28,13 +35,13 @@ model tiny
         int     21h
         ret
 
-;; ====================== PRINT ERROR MSG ============================
+;; ========================= PRINT ERROR MSG =========================
 ;; cx - index with error
 ;;
 ;; result - stdout
 ;; ===================================================================
     _error_print:
-        print_ptr   sep
+        print_ptr   new_line
         print_ptr   error_msg_part1
 
         mov         bx, offset buffer
@@ -49,16 +56,13 @@ model tiny
         call        print_dec
         print_ptr   error_msg_part3
         ret
-;; ===================================================================
 
-
-    include STRUTIL.ASM
-    sep             db      0dh, 0ah, "$"
+;; ========================== COSNTANTS ==============================
+    new_line        db      0dh, 0ah, "$"
     error_msg_part1 db      "Found unexpected symbol '$"
     error_msg_part2 db      "' at $"
     error_msg_part3 db      " position.$"
+;; ========================== STATIC VARABLES ========================
     buffer          db      BUFFER_LENGTH dup (24h), "$"
-    message         db      "Hello DOS $"
-    numbers         db      "123$"
 
-    end start
+    end _start
