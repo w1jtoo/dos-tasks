@@ -51,11 +51,13 @@ model tiny
             _positive_sign:
                 add     dx, ax
                 pop     ax
+                xor     cx, cx
                 jmp     _loop
 
             _negative_sign:
                 sub     dx, ax
                 pop     ax
+                xor     cx, cx
                 jmp     _loop
 
             _skip_char:
