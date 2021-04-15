@@ -1,2 +1,13 @@
 *.[Cc][Oo][Mm]
 *.[Oo][Bb][Jj]
+
+# DOS specific files and binaries
+
+bin/
+
+*.com
+*.COM
+
+# temp files that  used in scripts
+*__temp
+
