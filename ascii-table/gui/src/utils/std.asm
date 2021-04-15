@@ -1,6 +1,4 @@
 %macro PRINT_STR 1
-%%str:  db  %1, '$'
-
     push    ax
     push    dx
 
@@ -8,6 +6,11 @@
     mov     dx, %%str
     int     0x21
 
-    pop     ax
     pop     dx
+    pop     ax
+
+    jmp     %%end+1
+%%str:  db  %1, '$'
+%%end:
+    nop
 %endmacro
