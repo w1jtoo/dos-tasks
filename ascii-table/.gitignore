@@ -1,4 +1,7 @@
-# DOS specific files
+# DOS specific files and binaries
+
+bin/*
+
 *.com
 *.COM
 
