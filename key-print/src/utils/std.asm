@@ -25,3 +25,9 @@
     pop     dx
     pop     ax
 %endmacro
+
+%macro PRINT_CHAR 1
+    mov     dl, byte %1
+    mov     ah, 0x2
+    int     0x21
+%endmacro
