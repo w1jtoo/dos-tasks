@@ -22,7 +22,7 @@ echo "cls"                          >> $path_to_temp_file
 if [ "$1" = "debug" ];
     then
         td="TD.EXE"
-        cp ../../deps/$td $bin
+        cp ../deps/$td $bin
         echo "${td} $main"          >> $path_to_temp_file
     else
         echo $main                  >> $path_to_temp_file
