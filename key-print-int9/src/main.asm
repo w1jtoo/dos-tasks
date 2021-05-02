@@ -1,14 +1,27 @@
 bits    16
 org     0x100
 
-%include    "src/utils/std.asm"
-%include    "src/utils/macro.asm"
+_start:
+    jmp     start
 
-%define     OVERFLOW_FLAG 0xff
+%include    "src/utils/std.asm"
+%include    "src/utils/str.asm"
+%include    "src/keyboard_handler.asm"
+
+%define     NEW_LINE    0xa, 0xd
+
+promt:  db  "     This program shows state of keyboard", NEW_LINE
+        db  " buffer. This buffer uses self written 9th", NEW_LINE
+        db  " interruption  emulation.", NEW_LINE, NEW_LINE
+        db  "    enter   - push the print of buffer state", NEW_LINE
+        db  "    escape  - exit the program", NEW_LINE, '$'
 
 start:
     call    init_int9
 
+    call    print_line
+    PRINT_PTR     promt
+    call    print_line
 .loop:
     hlt
 
@@ -24,7 +37,7 @@ start:
     push    ax
 
     mov     bx, word [ibuff.head]
-.loop1:
+.contains_loop:
     xor     ax, ax
     mov     ah, byte [bx]
 
@@ -43,7 +56,7 @@ start:
 
     mov     bx, ibuff.buffer
 .to_end:
-    jmp     .loop1
+    jmp     .contains_loop
 
 .ret:
     pop     ax
@@ -52,14 +65,18 @@ start:
     jmp     .loop
 
 .overflow:
+    call    print_line
     PRINT_PTR       overflow
     call    print_kb_struct
     call    pop_all_buffer
+    call    print_line
 
     jmp     .loop
 .print_buffer:
+    call    print_line
     call    print_kb_struct
     call    pop_all_buffer
+    call    print_line
 
     jmp     .loop
 
@@ -67,27 +84,25 @@ start:
     call    restore_int9
     EXIT
 
-%macro TO_HEX 1
-    add     byte %1, '0'
-    cmp     byte %1, '9'
-    jna     %%ret
+print_line:
+    PRINTLN_STR       "============================================"
+    ret
 
-    add    %1, 'A'- '9' + 1
-%%ret:
-%endmacro
-
-%define     NEW_LINE    0xa, 0xd
 description:
-            dw NEW_LINE
-.l1:        dw "Head index: 0x"
-.head:      dw  0x0, NEW_LINE
-.l2:        dw "Tail index: 0x"
-.tail:      dw 0x0, NEW_LINE
-.l3:        dw "Overflow flag: "
-.overflow:  dw 0x0, NEW_LINE, '$'
+            db NEW_LINE
+.l1:        db "Head index: 0x"
+.head:      dw  0x0
+            db NEW_LINE
+.l2:        db "Tail index: 0x"
+.tail:      dw 0x0
+            db NEW_LINE
+.l3:        db "Overflow flag:"
+.overflow:  dw 0x0
+            db NEW_LINE, '$'
 
 overflow:
-    dw "Buffer overflow.", NEW_LINE, '$'
+    db "Buffer overflow. Print buffer state and", NEW_LINE
+    db "clean the buffer.", NEW_LINE, NEW_LINE, '$'
 
 print_kb_struct:
     push    ax
@@ -185,7 +200,7 @@ pop_all_buffer:
     cmp     bx, [ibuff.tail]
     je     .ret
 
-    call    pop_buffer
+    call    pop_and_clean_buffer
 
     jmp     .loop
 
@@ -194,151 +209,3 @@ pop_all_buffer:
     pop     ax
 
     ret
-
-pop_buffer:
-    push    bx
-
-    mov     bx, [ibuff.head]
-    mov     al, ds:[bx]
-    inc     bx
-
-    cmp     bx, ibuff.end
-    jnz     .ret
-
-    mov     bx, ibuff.buffer
-.ret:
-    mov     [ibuff.head], bx
-
-    mov     bx, [ibuff.flags]
-    mov     bx, 0x0
-    mov     [ibuff.flags], bx
-
-    pop     bx
-    ret
-
-
-push_to_buffer:
-    push    di
-    push    bx
-    push    bp
-
-    mov     di, cs:[ibuff.tail]
-    mov     bx, di
-    inc     di
-
-    cmp     di, ibuff.end
-    jnz     .to_tail
-
-    mov     di, ibuff.buffer
-
-.to_tail:
-    mov     bp, di
-    cmp     di, cs:[ibuff.head]
-    jz      .overflow
-
-    mov     di, bx
-    mov     byte cs:[di], al
-    mov     cs:[ibuff.tail], bp
-
-    jmp     .ret
-
-.overflow:
-    mov     bp, cs:[ibuff.flags]
-    or      bp, OVERFLOW_FLAG
-    mov     cs:[ibuff.flags], bp
-
-.ret:
-    pop     bp
-    pop     bx
-    pop     di
-
-    ret
-
-%define     OFFSET_TO_HANDLER   0x24
-init_int9:
-    push    ax
-    push    ds
-    push    si
-    push    di
-
-    xor     ax, ax
-    mov     ds, ax
-    mov     si, OFFSET_TO_HANDLER
-    mov     di, old_handler
-
-    movsw
-    movsw
-
-    cli
-    mov     ax, int9
-    mov     [OFFSET_TO_HANDLER], ax
-
-    mov     ax, cs
-    mov     [OFFSET_TO_HANDLER + 2], ax
-    sti
-
-    pop     di
-    pop     si
-    pop     ds
-    pop     ax
-
-    ret
-
-restore_int9:
-    push    ax
-    push    ds
-    push    si
-    push    di
-    push    es
-
-    xor     ax, ax
-    mov     es, ax
-
-    push    cs
-    pop     ds
-
-    mov     si, old_handler
-    mov     di, OFFSET_TO_HANDLER
-
-    cli
-    movsw
-    movsw
-    sti
-
-    pop     es
-    pop     di
-    pop     si
-    pop     ds
-    pop     ax
-    ret
-
-int9:
-    push    ax
-
-    in      al, 0x60
-    call    push_to_buffer
-
-    mov     al, 0x20
-    out     0x20, al
-
-    pop     ax
-    iret
-
-%define             buff_size 16
-;;struc kb_buff
-;;    .buffer         resb    buff_size
-;;    .head           resw  .buffer
-;;    .tail           resw  .buffer
-;;endstruc
-
-
-ibuff: 
-    .buffer:    times buff_size db 0
-    .end:
-    .head:      dw ibuff.buffer
-    .tail:      dw ibuff.buffer
-    .flags:     db 0
-
-old_handler:
-    .segment:   dw  0
-    .addres:    dw  0
