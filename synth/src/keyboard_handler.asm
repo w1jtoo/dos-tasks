@@ -1,16 +1,7 @@
 %define     OFFSET_TO_HANDLER   0x24
-%define     BUFFER_SIZE         0x10
-%define     OVERFLOW_FLAG       10000000b
-old_handler:
-    .segment:   dw  0
-    .addres:    dw  0
+%define     BUFFER_SIZE         0xa
+%define     OVERFLOW_FLAG       0xff
 
-ibuff: 
-    .buffer:    times BUFFER_SIZE db 0
-    .end:
-    .head:      dw ibuff.buffer
-    .tail:      dw ibuff.buffer
-    .flags:     db 0
 
 _push_to_buffer:
     push    di
@@ -49,6 +40,7 @@ _push_to_buffer:
 
     ret
 
+
 pop_buffer:
     push    bx
 
@@ -69,6 +61,30 @@ pop_buffer:
 
     pop     bx
     ret
+
+pop_and_clean_buffer:
+    push    bx
+
+    mov     bx, [ibuff.head]
+
+    mov     byte [bx], byte 0x0
+    mov     al, ds:[bx]
+    inc     bx
+
+    cmp     bx, ibuff.end
+    jnz     .ret
+
+    mov     bx, ibuff.buffer
+.ret:
+    mov     [ibuff.head], bx
+
+    mov     bx, [ibuff.flags]
+    mov     bx, 0x0
+    mov     [ibuff.flags], bx
+
+    pop     bx
+    ret
+
 
 init_int9:
     push    ax
@@ -98,6 +114,7 @@ init_int9:
     pop     ax
 
     ret
+
 
 _int9:
     push    ax
@@ -139,3 +156,15 @@ restore_int9:
     pop     ds
     pop     ax
     ret
+
+
+old_handler:
+    .segment:   dw  0
+    .address:   dw  0
+
+ibuff: 
+    .buffer:    times BUFFER_SIZE db 0
+    .end:
+    .head:      dw ibuff.buffer
+    .tail:      dw ibuff.buffer
+    .flags:     dw 0
